@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="ko">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>에코가이드 AI - 지역별 맞춤 분리배출 안내 서비스</title>
+    <!-- 모던 폰트 및 스타일시트 -->
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body class="font-size-1">
+    <div class="app-wrapper">
+
+        <!-- 1. 상단 배리어프리 접근성 툴바 (고령층 및 시각 배려) -->
+        <header class="accessibility-bar" role="toolbar" aria-label="화면 접근성 설정">
+            <div class="accessibility-group">
+                <span class="bar-label">🔎 글자 크기:</span>
+                <div class="font-size-controls">
+                    <button type="button" id="fontNormalBtn" class="btn-font" aria-label="보통 글자 크기">보통</button>
+                    <button type="button" id="fontLargeBtn" class="btn-font active" aria-label="크게 글자 크기">크게</button>
+                    <button type="button" id="fontXLargeBtn" class="btn-font" aria-label="아주 크게 글자 크기">아주 크게</button>
+                </div>
+            </div>
+            <div class="accessibility-group">
+                <button type="button" id="highContrastToggle" class="btn-high-contrast" aria-pressed="false">
+                    👁️ 고대비 모드
+                </button>
+            </div>
+        </header>
+
+        <!-- 2. 웹사이트 메인 타이틀 & 소개 -->
+        <div class="site-header">
+            <div class="badge-official">🤖 인공지능 지도학습(Supervised Learning: k-NN & Naive Bayes) 분류 엔진 탑재</div>
+            <h1 class="site-title">우리 동네 맞춤형 분리수거 AI 도우미</h1>
+            <p class="site-desc">
+                버리려는 물건의 이름과 상태를 입력하면, <strong>인공지능 지도학습(Supervised Learning) 분류 모델</strong>이
+                학습 데이터셋을 바탕으로 정확한 분리배출 품목을 예측하고 지자체별 수거 요일을 안내합니다.
+            </p>
+        </div>
+
+        <!-- 3. 핵심 검색 및 지역 설정 패널 -->
+        <main>
+            <section class="search-panel" aria-labelledby="search-section-heading">
+                <h2 id="search-section-heading" class="visually-hidden" style="display:none;">분리수거 검색 입력</h2>
+
+                <!-- 지도학습(Supervised Learning) 모델 선택 및 훈련 데이터 컨트롤러 -->
+                <div class="ml-control-bar">
+                    <div class="ml-model-select-group">
+                        <span class="ml-label">🧠 적용 지도학습 모델:</span>
+                        <div class="ml-radio-group">
+                            <label class="ml-radio-label">
+                                <input type="radio" name="mlModel" value="knn" checked id="modelKnn">
+                                <span>k-최근접 이웃 (k-NN, k=3)</span>
+                            </label>
+                            <label class="ml-radio-label">
+                                <input type="radio" name="mlModel" value="nb" id="modelNb">
+                                <span>나이브 베이즈 (Naive Bayes)</span>
+                            </label>
+                        </div>
+                    </div>
+                    <button type="button" id="openDatasetModalBtn" class="btn-dataset">
+                        📚 훈련 데이터셋 (<span id="trainCount">80</span>건) & 모델 재학습
+                    </button>
+                </div>
+
+                <!-- 거주 지역 선택 -->
+                <div class="form-row">
+                    <label class="input-label" for="sidoSelect">
+                        <span>📍 거주 지역 선택</span>
+                        <span class="sub-help">(지역별로 수거 방식과 배출 요일이 다릅니다)</span>
+                    </label>
+                    <div class="region-selector-grid">
+                        <select id="sidoSelect" class="custom-select" aria-label="시도 선택">
+                            <!-- JS에서 자동 채움 -->
+                        </select>
+                        <select id="sigunguSelect" class="custom-select" aria-label="시군구 선택">
+                            <!-- JS에서 자동 채움 -->
+                        </select>
+                    </div>
+                </div>
+
+                <!-- 물건 이름 및 상태 입력 -->
+                <div class="form-row">
+                    <label class="input-label" for="itemInput">
+                        <span>🗑️ 버리려는 물건과 상태 입력</span>
+                        <span class="sub-help">(예: 깨끗한 플라스틱 페트병, 기름 묻은 피자박스, 깨진 유리)</span>
+                    </label>
+                    <div class="search-input-group">
+                        <input type="text" id="itemInput" class="custom-input" placeholder="물건의 이름이나 상태를 입력하세요..."
+                            autocomplete="off">
+                        <!-- 음성 입력 버튼 (STT) -->
+                        <button type="button" id="voiceInputBtn" class="btn-icon" title="말로 검색하기 (음성 인식)"
+                            aria-label="음성으로 검색">
+                            🎤
+                        </button>
+                        <!-- AI 분석 버튼 -->
+                        <button type="button" id="analyzeBtn" class="btn-primary">
+                            <span>🔍 AI 안내 찾기</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- 자주 묻는 물품 퀵 추천 태그 -->
+                <div class="quick-tags-section">
+                    <span class="quick-tag-label">자주 찾는 물품:</span>
+                    <div id="quickTagsContainer" class="quick-tags-container">
+                        <!-- JS에서 동적 생성 -->
+                    </div>
+                </div>
+
+                <!-- 부가 도구 (사진 판별 & 음성 안내 듣기) -->
+                <div class="media-tools-bar">
+                    <div class="image-upload-wrapper">
+                        <label for="imageUploadInput" class="btn-outline-upload">
+                            📷 <span>사진으로 물품 찾기 (AI 비전 판별 데모)</span>
+                        </label>
+                        <input type="file" id="imageUploadInput" accept="image/*" class="hidden-file-input">
+                    </div>
+
+                    <button type="button" id="voiceSpeakBtn" class="btn-voice-listen" style="display:none;">
+                        🔊 <span>큰 소리로 듣기</span>
+                    </button>
+                </div>
+            </section>
+
+            <!-- 4. AI 분석 및 지역 맞춤 배출 결과 섹션 -->
+            <section id="resultSection" class="result-section hidden" aria-live="polite">
+                <!-- JS에서 동적 렌더링 -->
+            </section>
+
+            <!-- 5. 환경부 분리배출 4대 핵심 원칙 -->
+            <section class="principles-section" aria-labelledby="principles-heading">
+                <h3 id="principles-heading" class="section-title">♻️ 올바른 분리배출 4대 핵심 원칙</h3>
+                <p class="section-desc">환경부와 한국환경공단이 권장하는 재활용품 분리배출의 기본입니다.</p>
+                <div class="principles-grid">
+                    <div class="principle-card">
+                        <div class="principle-icon">🗑️</div>
+                        <h4 class="principle-title">1. 비운다</h4>
+                        <p class="principle-desc">용기 안의 내용물이나 찌꺼기는 남김없이 비우고 배출합니다.</p>
+                    </div>
+                    <div class="principle-card">
+                        <div class="principle-icon">💧</div>
+                        <h4 class="principle-title">2. 헹군다</h4>
+                        <p class="principle-desc">이물질이나 양념이 묻어있다면 물로 깨끗하게 헹궈냅니다.</p>
+                    </div>
+                    <div class="principle-card">
+                        <div class="principle-icon">✂️</div>
+                        <h4 class="principle-title">3. 분리한다</h4>
+                        <p class="principle-desc">비닐 라벨, 뚜껑, 박스 테이프 등 다른 재질은 모두 떼어냅니다.</p>
+                    </div>
+                    <div class="principle-card">
+                        <div class="principle-icon">📦</div>
+                        <h4 class="principle-title">4. 섞지 않는다</h4>
+                        <p class="principle-desc">재질별·품목별로 분류하여 지정된 수거함에만 배출합니다.</p>
+                    </div>
+                </div>
+            </section>
+        </main>
+
+        <!-- 6. 사이트 푸터 -->
+        <footer class="site-footer">
+            <div class="footer-author">
+                2026 인공지능 기초 프로젝트 수행평가 | 성신여자고등학교 20814 양효은
+            </div>
+            <div class="footer-reference">
+                본 서비스는 환경부 생활폐기물 분리배출 누리집(분리배출.kr) 가이드라인 및 공공데이터포털 API 기준을 토대로 구현된 인공지능 기반 분리배출 안내 시스템입니다.
+            </div>
+        </footer>
+
+    </div>
+
+    <!-- 7. 인공지능 지도학습 훈련 데이터셋 관리 & 모델 재학습 모달 -->
+    <div id="datasetModal" class="modal-backdrop" style="display:none;" role="dialog" aria-modal="true"
+        aria-labelledby="modalTitle">
+        <div class="modal-card">
+            <div class="modal-header">
+                <div>
+                    <h3 id="modalTitle" class="modal-title">📚 지도학습(Supervised Learning) 훈련 데이터셋 관리</h3>
+                    <p class="modal-subtitle">정답 레이블(Y)이 포함된 훈련 데이터를 관리하고, 새로운 데이터를 추가하여 모델을 실시간 재학습합니다.</p>
+                </div>
+                <button type="button" id="closeDatasetModalBtn" class="btn-modal-close" aria-label="창 닫기">✕</button>
+            </div>
+
+            <!-- 새 훈련 데이터 추가 폼 -->
+            <div class="train-add-box">
+                <h4 class="train-add-title">➕ 새로운 훈련 데이터 추가 (지도학습 데이터 증강)</h4>
+                <div class="train-form-grid">
+                    <input type="text" id="newTrainText" class="custom-input"
+                        placeholder="새로운 쓰레기 표현 (예: 양념 조금 묻은 비닐봉투)">
+                    <select id="newTrainLabel" class="custom-select">
+                        <!-- JS에서 카테고리 옵션 자동 생성 -->
+                    </select>
+                    <button type="button" id="addTrainDataBtn" class="btn-primary">
+                        <span>학습 데이터 추가 & 재학습</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- 훈련 데이터셋 목록 테이블 -->
+            <div class="dataset-table-wrapper">
+                <div class="dataset-stats-bar">
+                    <span>총 훈련 데이터: <strong id="datasetTotalCount">0</strong>건</span>
+                    <span class="status-indicator">● 실시간 학습 준비 완료</span>
+                </div>
+                <table class="dataset-table">
+                    <thead>
+                        <tr>
+                            <th style="width: 50px;">번호</th>
+                            <th>특징 텍스트 (입력 데이터 X)</th>
+                            <th style="width: 170px;">정답 분류 레이블 (정답 Y)</th>
+                        </tr>
+                    </thead>
+                    <tbody id="datasetTableBody">
+                        <!-- JS에서 동적 렌더링 -->
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="modal-footer">
+                <button type="button" id="resetDatasetBtn" class="btn-outline">초기 기본 데이터셋 복원</button>
+                <button type="button" id="closeDatasetModalBottomBtn" class="btn-primary">닫기</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 스크립트 연결 -->
+    <script src="data.js"></script>
+    <script src="app.js"></script>
+</body>
+
+</html>
